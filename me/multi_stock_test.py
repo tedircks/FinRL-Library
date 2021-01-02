@@ -69,10 +69,10 @@ env_trade, obs_trade = env_setup.create_env_trading(data=trade,
 #                      'learning_rate': 0.0002,
 #                      'verbose': 0,
 #                      'timesteps': 150000}
-# model_a2c = agent.train_A2C(model_name="A2C_{}".format(now), model_params=a2c_params_tuning)
+# model_a2c = agent.train_A2C(model_name="A2C_full_train", model_params=a2c_params_tuning)
 # print("============End Model Training=========")
 
-model_a2c = A2C.load(os.path.abspath('./me/trained_models/A2C_20201228-23h36.zip'))
+model_a2c = A2C.load(os.path.abspath('./me/trained_models/A2C_full_train.zip'))
 
 data_turbulence = df[(df.date < '2019-01-01') & (df.date >= '2009-01-01')]
 insample_turbulence = data_turbulence.drop_duplicates(subset=['date'])
@@ -89,3 +89,24 @@ df_account_value, df_actions = DRLAgent.DRL_prediction(model=model_a2c,
                                                        test_data=trade,
                                                        test_env=env_trade,
                                                        test_obs=obs_trade)
+
+df_actions.to_csv('./me/results/actions.csv')
+
+# print("==============Get Backtest Results===========")
+# perf_stats_all = BackTestStats(account_value=df_account_value)
+# perf_stats_all = pd.DataFrame(perf_stats_all)
+# # perf_stats_all.to_csv("./"+config.RESULTS_DIR+"/perf_stats_all_"+now+'.csv')
+
+# print("==============Compare to DJIA===========")
+# # S&P 500: ^GSPC
+# # Dow Jones Index: ^DJI
+# # NASDAQ 100: ^NDX
+# BackTestPlot(df_account_value,
+#              baseline_ticker='^DJI',
+#              baseline_start='2019-01-01',
+#              baseline_end='2020-12-01')
+
+# print("==============Get Baseline Stats===========")
+# baesline_perf_stats = BaselineStats('^DJI',
+#                                     baseline_start='2019-01-01',
+#                                     baseline_end='2020-12-01')

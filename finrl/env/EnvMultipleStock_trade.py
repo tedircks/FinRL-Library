@@ -6,6 +6,7 @@ import pandas as pd
 from gym.utils import seeding
 import gym
 from gym import spaces
+from pprint import pprint
 import matplotlib
 matplotlib.use('Agg')
 
@@ -66,6 +67,8 @@ class StockEnvTrade(gym.Env):
         self._seed()
 
         self.iteration = iteration
+
+        # pprint([{num: value} for num, value in enumerate(self.state)], width=20)
 
     def _sell_stock(self, index, action):
         # perform sell action based on the sign of the action
@@ -130,9 +133,13 @@ class StockEnvTrade(gym.Env):
                                                   * np.array(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]))
             print("previous_total_asset:{}".format(self.asset_memory[0]))
 
+            #pprint([{num: value} for num, value in enumerate(self.state)], width=20)
+            # print(len(self.state))
+            # print(self.stock_dim)
+
             print("end_total_asset:{}".format(end_total_asset))
             print("total_reward:{}".format(self.state[0]+sum(np.array(self.state[1:(self.stock_dim+1)])
-                                                             * np.array(self.state[(self.stock_dim+1):(self.stock_dim+1)])) - self.asset_memory[0]))
+                                                             * np.array(self.state[(self.stock_dim+1):61])) - self.asset_memory[0]))
             print("total_cost: ", self.cost)
             print("total trades: ", self.trades)
 
