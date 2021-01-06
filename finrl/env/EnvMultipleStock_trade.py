@@ -158,11 +158,14 @@ class StockEnvTrade(gym.Env):
 
         else:
             # print(np.array(self.state[1:29]))
+            # print(actions)
             actions = actions * self.hmax
+            # print(actions)
             self.actions_memory.append(actions)
             #actions = (actions.astype(int))
             if self.turbulence >= self.turbulence_threshold:
                 actions = np.array([-self.hmax]*self.stock_dim)
+
             begin_total_asset = self.state[0] + sum(np.array(self.state[1:(self.stock_dim+1)])
                                                     * np.array(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]))
             # print("begin_total_asset:{}".format(begin_total_asset))
@@ -171,13 +174,15 @@ class StockEnvTrade(gym.Env):
 
             sell_index = argsort_actions[:np.where(actions < 0)[0].shape[0]]
             buy_index = argsort_actions[::-1][:np.where(actions > 0)[0].shape[0]]
+            # print(argsort_actions)
+            # print(sell_index)
 
             for index in sell_index:
-                # print('take sell action'.format(actions[index]))
+                #print('take sell action'.format(actions[index]))
                 self._sell_stock(index, actions[index])
 
             for index in buy_index:
-                # print('take buy action: {}'.format(actions[index]))
+                #print('take buy action: {}'.format(actions[index]))
                 self._buy_stock(index, actions[index])
 
             self.day += 1

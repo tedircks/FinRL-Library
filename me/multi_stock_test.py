@@ -5,6 +5,7 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import datetime
+from pprint import pprint
 from finrl.config import config
 from finrl.marketdata.yahoodownloader import YahooDownloader
 from finrl.preprocessing.preprocessors import FeatureEngineer
@@ -18,6 +19,7 @@ from finrl.trade.backtest import backtest_strat, baseline_strat
 import os
 import sys
 import warnings
+from stable_baselines3.common.env_checker import check_env
 warnings.filterwarnings('ignore')
 
 print(sys.path)
@@ -56,41 +58,43 @@ env_setup = EnvSetup(stock_dim=stock_dimension,
 env_train = env_setup.create_env_training(data=train,
                                           env_class=StockEnvTrain)
 
-# trading environment
-env_trade, obs_trade = env_setup.create_env_trading(data=trade,
-                                                    env_class=StockEnvTrade)
+check_env(env_train)
 
+# --------------- Training
 # agent = DRLAgent(env=env_train)
 
 # print("==============Model Training===========")
 # now = datetime.datetime.now().strftime('%Y%m%d-%Hh%M')
 # a2c_params_tuning = {'n_steps': 5,
-#                      'ent_coef': 0.005,
+#                      'ent_coef': 0.0005,
 #                      'learning_rate': 0.0002,
 #                      'verbose': 0,
 #                      'timesteps': 150000}
-# model_a2c = agent.train_A2C(model_name="A2C_full_train", model_params=a2c_params_tuning)
+# model_a2c = agent.train_A2C(model_name="A2C_full_train_{}".format(now), model_params=a2c_params_tuning, save=False)
 # print("============End Model Training=========")
 
-model_a2c = A2C.load(os.path.abspath('./me/trained_models/A2C_full_train.zip'))
+# model_a2c = A2C.load(os.path.abspath('./me/trained_models/A2C_full_train.zip'))
 
-data_turbulence = df[(df.date < '2019-01-01') & (df.date >= '2009-01-01')]
-insample_turbulence = data_turbulence.drop_duplicates(subset=['date'])
+# print(calu)
+# data_turbulence = df[(df.date < '2019-01-01') & (df.date >= '2009-01-01')]
+# insample_turbulence = data_turbulence.drop_duplicates(subset=['date'])
 
-insample_turbulence.turbulence.describe()
-turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
+# insample_turbulence.turbulence.describe()
+# turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
 
+# # --------------- Trading
+# env_trade, obs_trade = env_setup.create_env_trading(data=trade,
+#                                                     env_class=StockEnvTrade,
+#                                                     turbulence_threshold=250)
 
-env_trade, obs_trade = env_setup.create_env_trading(data=trade,
-                                                    env_class=StockEnvTrade,
-                                                    turbulence_threshold=250)
+# # --------------- Predict
+# df_account_value, df_actions = DRLAgent.DRL_prediction(model=model_a2c,
+#                                                        test_data=trade,
+#                                                        test_env=env_trade,
+#                                                        test_obs=obs_trade)
 
-df_account_value, df_actions = DRLAgent.DRL_prediction(model=model_a2c,
-                                                       test_data=trade,
-                                                       test_env=env_trade,
-                                                       test_obs=obs_trade)
-
-df_actions.to_csv('./me/results/actions.csv')
+# print(df_account_value)
+# df_actions.to_csv('./me/results/actions.csv')
 
 # print("==============Get Backtest Results===========")
 # perf_stats_all = BackTestStats(account_value=df_account_value)
