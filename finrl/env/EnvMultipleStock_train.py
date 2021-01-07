@@ -40,7 +40,6 @@ class StockEnvTrain(gym.Env):
 
         # action_space normalization and shape is self.stock_dim
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.action_space,))
-        print(self.action_space.high)
         # Shape = 181: [Current Balance]+[prices 1-30]+[owned shares 1-30]
         # +[macd 1-30]+ [rsi 1-30] + [cci 1-30] + [adx 1-30]
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_space,))
@@ -48,10 +47,10 @@ class StockEnvTrain(gym.Env):
         self.data = self.df.loc[self.day, :]
         self.terminal = False
         # initalize state
-        self.state = [self.initial_amount] + \
-            self.data.close.values.tolist() + \
-            [0]*self.stock_dim + \
-            sum([self.data[tech].values.tolist() for tech in self.tech_indicator_list], [])
+        self.state = np.array([self.initial_amount] +
+                              self.data.close.values.tolist() +
+                              [0]*self.stock_dim +
+                              sum([self.data[tech].values.tolist() for tech in self.tech_indicator_list], []))
         # initialize reward
         self.reward = 0
         self.cost = 0
@@ -154,10 +153,10 @@ class StockEnvTrain(gym.Env):
             self.data = self.df.loc[self.day, :]
             # load next state
             # print("stock_shares:{}".format(self.state[29:]))
-            self.state = [self.state[0]] + \
-                self.data.close.values.tolist() + \
-                list(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]) + \
-                sum([self.data[tech].values.tolist() for tech in self.tech_indicator_list], [])
+            self.state = np.array([self.state[0]] +
+                                  self.data.close.values.tolist() +
+                                  list(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]) +
+                                  sum([self.data[tech].values.tolist() for tech in self.tech_indicator_list], []))
 
             end_total_asset = self.state[0] + sum(np.array(self.state[1:(self.stock_dim+1)])
                                                   * np.array(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]))
@@ -181,10 +180,10 @@ class StockEnvTrain(gym.Env):
         self.terminal = False
         self.rewards_memory = []
         # initiate state
-        self.state = [self.initial_amount] + \
-            self.data.close.values.tolist() + \
-            [0]*self.stock_dim + \
-            sum([self.data[tech].values.tolist() for tech in self.tech_indicator_list], [])
+        self.state = np.array([self.initial_amount] +
+                              self.data.close.values.tolist() +
+                              [0]*self.stock_dim +
+                              sum([self.data[tech].values.tolist() for tech in self.tech_indicator_list], []))
         # iteration += 1
         return self.state
 
