@@ -107,8 +107,9 @@ class StockEnvTrain(gym.Env):
             print("end_total_asset:{}".format(end_total_asset))
             df_total_value = pd.DataFrame(self.asset_memory)
             # df_total_value.to_csv('results/account_value_train.csv')
-            print("total_reward:{}".format(self.state[0]+sum(np.array(self.state[1:(self.stock_dim+1)])
-                                                             * np.array(self.state[(self.stock_dim+1):(self.stock_dim*2+1)])) - self.initial_amount))
+            total_reward = self.state[0]+sum(np.array(self.state[1:(self.stock_dim+1)])
+                                             * np.array(self.state[(self.stock_dim+1):(self.stock_dim*2+1)])) - self.initial_amount
+            print("total_reward:{}".format(total_reward))
             print("total_cost: ", self.cost)
             print("total_trades: ", self.trades)
             df_total_value.columns = ['account_value']
@@ -116,6 +117,7 @@ class StockEnvTrain(gym.Env):
             sharpe = (252**0.5)*df_total_value['daily_return'].mean() / \
                 df_total_value['daily_return'].std()
             print("Sharpe: ", sharpe)
+            print('Return: ', total_reward / self.initial_amount)
             print("=================================")
             df_rewards = pd.DataFrame(self.rewards_memory)
             # df_rewards.to_csv('results/account_rewards_train.csv')

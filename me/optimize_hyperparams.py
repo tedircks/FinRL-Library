@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     study = optuna.create_study(sampler=sampler, pruner=pruner, direction="maximize")
     try:
-        study.optimize(objective, n_trials=N_TRIALS, n_jobs=N_JOBS, timeout=600)
+        study.optimize(objective, n_jobs=N_JOBS)
     except KeyboardInterrupt:
         pass
 

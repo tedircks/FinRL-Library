@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import gym
+import seaborn as sns
+from me.callbacks.save_best_model_cb import SaveOnBestTrainingRewardCallback
 from pprint import pprint
 from finrl.config import config
 from finrl.marketdata.yahoodownloader import YahooDownloader
@@ -20,33 +22,19 @@ from finrl.trade.backtest import backtest_strat, baseline_strat
 import os
 import sys
 import warnings
+from stable_baselines3.common import results_plotter
+from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.monitor import Monitor
 warnings.filterwarnings('ignore')
 
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 
 
-def test():
-    # df = pd.read_csv(os.path.abspath('./me/datasets/data.csv'), index_col=0)
-    # df.sort_values(['date', 'tic'], ignore_index=True)
-
-    # fe = FeatureEngineer(df.copy(),
-    #                      use_technical_indicator=True,
-    #                      tech_indicator_list=config.TECHNICAL_INDICATORS_LIST,
-    #                      use_turbulence=True,
-    #                      user_defined_feature=False)
-
-    # df = fe.preprocess_data()
-    print('Begin Loading dataset')
-    df = pd.read_csv(os.path.abspath('./me/datasets/data_with_techs_turb.csv'), index_col=0)
-    print('End Loading dataset')
-    df.sort_values(['date', 'tic'], ignore_index=True)
-
-    train_data = data_split(df, '2009-01-01', '2016-01-01')
-    trade_data = data_split(df, '2017-01-01', '2020-12-01')
+def test(training_data, trading_data):
 
     # params
-    stock_dimension = len(train_data.tic.unique())
+    stock_dimension = len(training_data.tic.unique())
     state_space = 1 + 2*stock_dimension + len(config.TECHNICAL_INDICATORS_LIST)*stock_dimension
 
     hmax = 100
@@ -61,23 +49,13 @@ def test():
                          initial_amount=1000000,
                          transaction_cost_pct=0.001)
 
-    # training environment
-    # env_train = StockEnvTrain(df=train_data,
-    #                           stock_dim=stock_dimension,
-    #                           hmax=hmax,
-    #                           initial_amount=starting_capital,
-    #                           transaction_cost_pct=transaction_cost_pct,
-    #                           reward_scaling=reward_scaling,
-    #                           state_space=state_space,
-    #                           action_space=stock_dimension,
-    #                           tech_indicator_list=technical_indicator_list,
-    #                           turbulence_threshold=250,
-    #                           day=0
-    #                           )
+    # pre-make training environment
+    # env_train = StockEnvTrain(params)
+
     # transition to make
     # https://medium.com/@apoddar573/making-your-own-custom-environment-in-gym-c3b65ff8cdaa
     env_train = gym.make('multi-stock-train-v0',
-                         df=train_data,
+                         df=training_data,
                          stock_dim=stock_dimension,
                          hmax=hmax,
                          initial_amount=starting_capital,
@@ -89,25 +67,14 @@ def test():
                          turbulence_threshold=250,
                          day=0)
 
-    check_env(env_train)
-    """
-    Value:  503.1598815917969
-    Params: 
-        gamma: 0.0003276859847400128
-        max_grad_norm: 1.573783455298761
-        gae_lambda: 0.004013533056897422
-        exponent_n_steps: 4
-        lr: 0.18030807662070017
-        ent_coef: 1.1401509020235004e-07
-        ortho_init: True
-        net_arch: tiny
-        activation_fn: relu
-    User attrs:
-        gamma_: 0.99967231401526
-        gae_lambda_: 0.9959864669431026
-        n_steps: 16
-    """
     # --------------- Training
+
+    log_dir = "me/tmp/"
+    os.makedirs(log_dir, exist_ok=True)
+    env_train = Monitor(env_train, log_dir)
+
+    callback = SaveOnBestTrainingRewardCallback(check_freq=5000, log_dir=log_dir)
+
     agent = DRLAgent(env=env_train)
 
     print("==============Model Training===========")
@@ -118,65 +85,132 @@ def test():
     #                      'verbose': 0,
     #                      'timesteps': 150000}
     a2c_params_tuning = {
-        "n_steps": 128,
-        "gamma": 0.9913,
-        "gae_lambda": 0.9987,
-        "learning_rate": 0.0008,
-        "ent_coef": 0.0399,
-        "max_grad_norm": 0.8688,
+        "n_steps": 32,
+        "gamma": 0.999304473794672,
+        "gae_lambda": 0.994452346235796,
+        "learning_rate": 0.00010054610987642753,
+        "ent_coef": 0.00215496380633495,
+        "max_grad_norm": 2.217146296318495,
         'verbose': 0,
-        'timesteps': 20000,
+        'timesteps': 2e5,  # 2e5
         "policy_kwargs": {
             "net_arch": 'tiny',
             "activation_fn": 'tanh',
-            "ortho_init": True,
+            "ortho_init": False,
         }
     }
-    model_a2c = agent.train_A2C(model_name="A2C_full_train_{}".format(now), model_params=a2c_params_tuning, save=False)
+    model_a2c = agent.train_A2C(
+        model_name="A2C_full_train_tuned{}".format(now),
+        model_params=a2c_params_tuning,
+        save=True,
+        callback=callback)
     print("============End Model Training=========")
 
-    # model_a2c = A2C.load(os.path.abspath('./me/trained_models/A2C_full_train.zip'))
+    # model_a2c = A2C.load(os.path.abspath('./me/tmp/best_model.zip'))
 
-    # print(calu)
-    # data_turbulence = df[(df.date < '2019-01-01') & (df.date >= '2009-01-01')]
-    # insample_turbulence = data_turbulence.drop_duplicates(subset=['date'])
+    account_value, actions = get_trade_results(env_setup, model_a2c)
 
-    # insample_turbulence.turbulence.describe()
-    # turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
 
+def get_trade_results(env_setup, model):
     # # --------------- Trading
-    env_trade, obs_trade = env_setup.create_env_trading(data=trade_data,
+    env_trade, obs_trade = env_setup.create_env_trading(data=trading_data,
                                                         env_class=StockEnvTrade,
-                                                        turbulence_threshold=250)
+                                                        turbulence_threshold=230)
 
     # # --------------- Predict
-    df_account_value, df_actions = DRLAgent.DRL_prediction(model=model_a2c,
-                                                           test_data=trade_data,
+    df_account_value, df_actions = DRLAgent.DRL_prediction(model=model,
+                                                           test_data=trading_data,
                                                            test_env=env_trade,
                                                            test_obs=obs_trade)
 
-    print(df_account_value)
-    # df_actions.to_csv('./me/results/actions.csv')
+    return df_account_value, df_actions
 
-    # print("==============Get Backtest Results===========")
-    # perf_stats_all = BackTestStats(account_value=df_account_value)
-    # perf_stats_all = pd.DataFrame(perf_stats_all)
-    # # perf_stats_all.to_csv("./"+config.RESULTS_DIR+"/perf_stats_all_"+now+'.csv')
 
-    # print("==============Compare to DJIA===========")
-    # # S&P 500: ^GSPC
-    # # Dow Jones Index: ^DJI
-    # # NASDAQ 100: ^NDX
-    # BackTestPlot(df_account_value,
-    #              baseline_ticker='^DJI',
-    #              baseline_start='2019-01-01',
-    #              baseline_end='2020-12-01')
+def get_feature_engineered_df(df):
+    fe = FeatureEngineer(df.copy(),
+                         use_technical_indicator=True,
+                         tech_indicator_list=config.TECHNICAL_INDICATORS_LIST,
+                         use_turbulence=True,
+                         user_defined_feature=False)
 
-    # print("==============Get Baseline Stats===========")
-    # baesline_perf_stats = BaselineStats('^DJI',
-    #                                     baseline_start='2019-01-01',
-    #                                     baseline_end='2020-12-01')
+    df = fe.preprocess_data()
+    return df
+
+
+def get_turbulence_threshold(df):
+    data_turbulence = df[(df.date < '2019-01-01') & (df.date >= '2009-01-01')]
+    insample_turbulence = data_turbulence.drop_duplicates(subset=['date'])
+
+    insample_turbulence.turbulence.describe()
+    turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
+
+    return turbulence_threshold
+
+
+def back_test(account_value):
+    print("==============Get Backtest Results===========")
+    perf_stats_all = BackTestStats(account_value=df_account_value)
+    perf_stats_all = pd.DataFrame(perf_stats_all)
+    # perf_stats_all.to_csv("./"+config.RESULTS_DIR+"/perf_stats_all_"+now+'.csv')
+
+    print("==============Compare to DJIA===========")
+    # S&P 500: ^GSPC
+    # Dow Jones Index: ^DJI
+    # NASDAQ 100: ^NDX
+    BackTestPlot(df_account_value,
+                 baseline_ticker='^DJI',
+                 baseline_start='2019-01-01',
+                 baseline_end='2020-12-01')
+
+    print("==============Get Baseline Stats===========")
+    baesline_perf_stats = BaselineStats('^DJI',
+                                        baseline_start='2019-01-01',
+                                        baseline_end='2020-12-01')
+
+
+def moving_average(values, window):
+    """
+    Smooth values by doing a moving average
+    :param values: (numpy array)
+    :param window: (int)
+    :return: (numpy array)
+    """
+    weights = np.repeat(1.0, window) / window
+    return np.convolve(values, weights, 'valid')
+
+
+def plot_results(log_folder, title='Learning Curve'):
+    """
+    plot the results
+
+    :param log_folder: (str) the save location of the results to plot
+    :param title: (str) the title of the task to plot
+    """
+    x, y = ts2xy(load_results(log_folder), 'timesteps')
+    y = moving_average(y, window=50)
+    # Truncate x
+    x = x[len(x) - len(y):]
+
+    fig = plt.figure(title)
+    plt.plot(x, y)
+    plt.xlabel('Number of Timesteps')
+    plt.ylabel('Rewards')
+    plt.title(title + " Smoothed")
+
+    # built int
+    results_plotter.plot_results([log_folder], 3e5, results_plotter.X_TIMESTEPS, "TD3 LunarLander")
+
+    plt.show()
 
 
 if __name__ == "__main__":
-    test()
+    df = pd.read_csv(os.path.abspath('./me/datasets/data_with_techs_turb.csv'), index_col=0)
+    df.sort_values(['date', 'tic'], ignore_index=True)
+
+    training_data = data_split(df, '2009-01-01', '2017-01-01')
+    trading_data = data_split(df, '2017-01-01', '2020-12-01')
+
+    test(training_data, trading_data)
+
+    # plot_results("me/tmp/")
+    plot_results("me/tmp")
