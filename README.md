@@ -1,4 +1,18 @@
-# FinRL: A Deep Reinforcement Learning Library for Quantitative Finance
+# FinRL: A Deep Reinforcement Learning Library for Quantitative Finance [![Twitter][1.1]][1] [![Facebook][1.2]][2] [![Google+][1.3]][3] [![Linkedin][1.4]][4]
+[1.1]: http://www.tensorlet.com/wp-content/uploads/2021/01/button_twitter_22x22.png
+[1.2]: http://www.tensorlet.com/wp-content/uploads/2021/01/facebook-button_22x22.png
+[1.3]: http://www.tensorlet.com/wp-content/uploads/2021/01/button_google_22.xx_.png
+[1.4]: http://www.tensorlet.com/wp-content/uploads/2021/01/button_linkedin_22x22.png
+
+[1]: https://twitter.com/intent/tweet?text=FinRL-A-Deep-Reinforcement-Learning-Library-for-Quantitative-Finance%20&url=hhttps://github.com/AI4Finance-LLC/FinRL-Library&hashtags=DRL&hashtags=AI
+[2]: https://www.facebook.com/sharer.php?u=http%3A%2F%2Fgithub.com%2FAI4Finance-LLC%2FFinRL-Library
+[3]: https://plus.google.com/share?url=https://github.com/AI4Finance-LLC/FinRL-Library
+[4]: https://www.linkedin.com/sharing/share-offsite/?url=http%3A%2F%2Fgithub.com%2FAI4Finance-LLC%2FFinRL-Library
+
+[![Downloads](https://pepy.tech/badge/finrl)](https://pepy.tech/project/finrl)
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![PyPI](https://img.shields.io/pypi/v/finrl.svg)](https://pypi.org/project/finrl/)
+
 
 FinRL is the open source library for practitioners. To efficiently automate trading, **AI4Finance** provides this educational resource and makes it easier to learn about deep reinforcement learning (DRL) in quantitative finance. 
 
@@ -75,12 +89,16 @@ Furthermore, we incorporated three application demonstrations, namely single sto
 ## Implemented Algorithms
 <img src=figs/alg_compare.PNG width="800">
 
-## Our Medium Blog
+## Medium Blogs and Related Reports
 [FinRL for Quantitative Finance: Tutorial for Single Stock Trading](https://towardsdatascience.com/finrl-for-quantitative-finance-tutorial-for-single-stock-trading-37d6d7c30aac)
 
 [FinRL for Quantitative Finance: Tutorial for Multiple Stock Trading](https://towardsdatascience.com/finrl-for-quantitative-finance-tutorial-for-multiple-stock-trading-7b00763b7530)
 
 [FinRL for Quantitative Finance: Tutorial for Portfolio Allocation](https://towardsdatascience.com/finrl-for-quantitative-finance-tutorial-for-portfolio-allocation-9b417660c7cd)
+
+[Analyticsindiamag.com] [How To Automate The Stock Market Using FinRL (Deep Reinforcement Learning Library)?](https://analyticsindiamag.com/stock-market-prediction-using-finrl/)
+
+【量化投资与机器学习】[基于深度强化学习的股票交易策略框架（代码+文档)](https://www.mdeditor.tw/pl/p5Gg)
 
 ## Installation:
 
@@ -94,6 +112,18 @@ Install the unstable development version of FinRL:
 pip install git+https://github.com/AI4Finance-LLC/FinRL-Library.git
 ```
 
+## Docker Installation
+
+Build the container:
+```bash
+$ docker build -f docker/Dockerfile -t finrl docker/
+```
+
+Start the container
+Note: The default container run starts jupyter lab in the root directory, allowing you to run scripts, notebooks, etc.
+```bash
+$ docker run -it --rm -v ${PWD}:/home -p 8888:8888 finrl
+```
 
 ### Prerequisites
 For [OpenAI Baselines](https://github.com/openai/baselines), you'll need system packages CMake, OpenMPI and zlib. Those can be installed as follows
@@ -135,7 +165,10 @@ To activate a virtualenv:
 ```
 source venv/bin/activate
 ```
-
+To activate a virtualenv on windows:
+```
+venv\Scripts\activate
+```
 ## Dependencies
 
 The script has been tested running under **Python >= 3.6.0**, with the folowing packages installed:
@@ -198,12 +231,11 @@ The stock data we use is pulled from Yahoo Finance API
 @article{finrl2020,
     author  = {Liu, Xiao-Yang and Yang, Hongyang and Chen, Qian and Zhang, Runjia and Yang, Liuqing and Xiao, Bowen and Wang, Christina Dan},
     journal = {Deep RL Workshop, NeurIPS 2020},
-    title   = {{FinRL: A Deep Reinforcement Learning Library forAutomated Stock Trading in Quantitative Finance}},
+    title   = {FinRL: A Deep Reinforcement Learning Library for Automated Stock Trading in Quantitative Finance},
     url     = {},
     year    = {2020}
 }
 ```
-
 
 # Call for Contributions
 
