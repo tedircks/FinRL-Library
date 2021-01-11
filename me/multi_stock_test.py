@@ -13,9 +13,7 @@ from finrl.config import config
 from finrl.marketdata.yahoodownloader import YahooDownloader
 from finrl.preprocessing.preprocessors import FeatureEngineer
 from finrl.preprocessing.data import data_split
-from finrl.env.environment import EnvSetup
-from finrl.env.EnvMultipleStock_train import StockEnvTrain
-from finrl.env.EnvMultipleStock_trade import StockEnvTrade
+from finrl.env.env_stocktrading import StockTradingEnv
 from finrl.model.models import DRLAgent
 from finrl.trade.backtest import BackTestStats, BaselineStats, BackTestPlot, backtest_strat, baseline_strat
 from finrl.trade.backtest import backtest_strat, baseline_strat
@@ -111,6 +109,61 @@ def test(training_data, trading_data):
     account_value, actions = get_trade_results(env_setup, model_a2c)
 
 
+def new_test():
+
+    processed = pd.read_csv(os.path.abspath('./me/datasets/new_data_with_techs_turb.csv'), index_col=0)
+
+    train = data_split(processed, '2009-01-01', '2018-01-01')
+    trade = data_split(processed, '2018-01-01', '2021-01-01')
+
+    stock_dimension = len(train.tic.unique())
+    state_space = 1 + 2*stock_dimension + len(config.TECHNICAL_INDICATORS_LIST)*stock_dimension
+    print(f"Stock Dimension: {stock_dimension}, State Space: {state_space}")
+
+    env_kwargs = {
+        "hmax": 100,
+        "initial_amount": 1000000,
+        "transaction_cost_pct": 0.001,
+        "state_space": state_space,
+        "stock_dim": stock_dimension,
+        "tech_indicator_list": config.TECHNICAL_INDICATORS_LIST,
+        "action_space": stock_dimension,
+        "reward_scaling": 1e-4
+    }
+
+    e_train_gym = StockTradingEnv(df=train, **env_kwargs)
+    env_train, _ = e_train_gym.get_sb_env()
+
+    log_dir = "me/tmp/"
+    os.makedirs(log_dir, exist_ok=True)
+
+    env_train.envs[0] = Monitor(env_train.envs[0], log_dir)
+
+    agent = DRLAgent(env=env_train)
+    model_a2c = agent.get_model("a2c", verbose=0)
+
+    trained_a2c = agent.train_model(model=model_a2c,
+                                    tb_log_name='a2c',
+                                    total_timesteps=100000)
+
+    data_turbulence = processed[(processed.date < '2018-01-01') & (processed.date >= '2009-01-01')]
+    insample_turbulence = data_turbulence.drop_duplicates(subset=['date'])
+    turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 1)
+
+    e_trade_gym = StockTradingEnv(df=trade, turbulence_threshold=380, **env_kwargs)
+    env_trade, obs_trade = e_trade_gym.get_sb_env()
+
+    print("BEGIN PREDICTION")
+    df_account_value, df_actions = DRLAgent.DRL_prediction(model=trained_a2c,
+                                                           test_data=trade,
+                                                           test_env=env_trade,
+                                                           test_obs=obs_trade)
+
+    print(df_account_value)
+
+    print("END PREDICTION")
+
+
 def get_trade_results(env_setup, model):
     # # --------------- Trading
     env_trade, obs_trade = env_setup.create_env_trading(data=trading_data,
@@ -124,6 +177,51 @@ def get_trade_results(env_setup, model):
                                                            test_obs=obs_trade)
 
     return df_account_value, df_actions
+
+
+def get_yahoo_data(start, end):
+    df = YahooDownloader(start_date=start,
+                         end_date=end,
+                         ticker_list=config.DOW_30_TICKER).fetch_data()
+
+    df.sort_values(['date', 'tic'], ignore_index=True)
+
+    x = df.tic.unique()
+    templ = []
+
+    # get intersection data, smallest data
+    for name, group in df.groupby('date'):
+        g = group.tic.unique()
+        if len(templ) == 0:
+            templ = [i for i in g if i in x]
+        else:
+            templ = [i for i in g if i in templ]
+
+    data_merge = pd.DataFrame(columns=list(df.columns))
+    x = np.array(templ).reshape(-1, 1)
+    temp_df = pd.DataFrame.from_records(x, columns=['tic'])
+
+    for name, group in df.groupby('date'):
+        temp_df['date'] = name
+
+        result_outer = pd.merge(group, temp_df,  on=['date', 'tic'])
+        result_outer = result_outer.sort_values(['date', 'tic'], ignore_index=True)
+
+        assert len(result_outer) == len(temp_df.tic.unique())
+        data_merge = data_merge.append(result_outer)
+
+    df = data_merge
+
+    fe = FeatureEngineer(
+        use_technical_indicator=True,
+        tech_indicator_list=config.TECHNICAL_INDICATORS_LIST,
+        use_turbulence=True,
+        user_defined_feature=False)
+
+    processed = fe.preprocess_data(df)
+    processed.sort_values(['date', 'tic'], ignore_index=True)
+
+    return processed
 
 
 def get_feature_engineered_df(df):
@@ -204,13 +302,15 @@ def plot_results(log_folder, title='Learning Curve'):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(os.path.abspath('./me/datasets/data_with_techs_turb.csv'), index_col=0)
-    df.sort_values(['date', 'tic'], ignore_index=True)
+    # df = pd.read_csv(os.path.abspath('./me/datasets/data_with_techs_turb.csv'), index_col=0)
+    # df.sort_values(['date', 'tic'], ignore_index=True)
 
-    training_data = data_split(df, '2009-01-01', '2017-01-01')
-    trading_data = data_split(df, '2017-01-01', '2020-12-01')
+    # training_data = data_split(df, '2009-01-01', '2017-01-01')
+    # trading_data = data_split(df, '2017-01-01', '2020-12-01')
 
-    test(training_data, trading_data)
+    # test(training_data, trading_data)
 
-    # plot_results("me/tmp/")
-    plot_results("me/tmp")
+    # # plot_results("me/tmp/")
+    # plot_results("me/tmp")
+
+    new_test()
