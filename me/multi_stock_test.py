@@ -19,6 +19,9 @@ from finrl.trade.backtest import BackTestStats, BaselineStats, BackTestPlot, bac
 from finrl.trade.backtest import backtest_strat, baseline_strat
 import os
 import sys
+
+import me.data_layer.data as data
+data.save_stock_data
 import warnings
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.results_plotter import load_results, ts2xy
@@ -30,7 +33,6 @@ matplotlib.use('TkAgg')
 
 
 def test(training_data, trading_data):
-
     # params
     stock_dimension = len(training_data.tic.unique())
     state_space = 1 + 2*stock_dimension + len(config.TECHNICAL_INDICATORS_LIST)*stock_dimension
